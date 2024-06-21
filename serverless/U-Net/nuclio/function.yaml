@@ -1,0 +1,54 @@
+metadata:
+  name: unet-coco
+  namespace: cvat
+  annotations:
+    name: U-NeT
+    type: detector
+    framework: openvino
+    spec: |
+      [
+        { "id": 0, "name": "defect", "type": "mask" }
+      ]
+
+spec:
+  description: UNeT
+  runtime: 'python:3.9'
+  handler: main:handler
+  eventTimeout: 30s
+
+  build:
+    image: cvat.unet-coco
+    baseImage: ubuntu:20.04
+
+    directives:
+      preCopy:
+        - kind: USER
+          value: root
+        - kind: RUN
+          value: apt update && apt install --no-install-recommends -y wget python3-pip
+        - kind: RUN
+          value: pip install tensorflow opencv-python-headless pillow pyyaml gdown
+        - kind: WORKDIR
+          value: /opt/nuclio
+        - kind: RUN
+          value: gdown --folder "https://drive.google.com/drive/folders/1HpGcFUbKsUYh_rpONaPiQjcu5WJZcp3T" -O temp
+        - kind: RUN
+          value: ln -s /usr/bin/python3 /usr/bin/python
+
+  triggers:
+    myHttpTrigger:
+      maxWorkers: 2
+      kind: 'http'
+      workerAvailabilityTimeoutMilliseconds: 10000
+      attributes:
+        maxRequestBodySize: 33554432  # 32MB
+        port: 12345
+
+  platform:
+    attributes:
+      restartPolicy:
+        name: always
+        maximumRetryCount: 3
+      mountMode: volume
+
+
